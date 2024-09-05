@@ -13,23 +13,23 @@ Any use of this method in new research would be better done with the "tsic3" pac
   
   The specific R scripts and their required libraries are listed below.
 
-  **`0_support`**
+  **0_support**
 
   Early files from the tsic2 package (in the directory `tsic2`) and the library file `tsic2_supplement.Rlib`:
     profvis
 
-  **`1_data_preparation`**
+  **1_data_preparation**
 
-  `amp_dx_history_preprocessing.R`:
+  amp_dx_history_preprocessing.R:
     tidyverse
 
-  **`2_run_analysis`**
+  **2_run_analysis**
 
-  `run_hbayes.R`:
+  run_hbayes.R:
     ggplot2
     tsic
 
-  `run_weib3_idt.R`:
+  run_weib3_idt.R:
     ggplot2
 
 2. Installation guide
