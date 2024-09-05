@@ -1,0 +1,321 @@
+---
+title: "TSIC Getting Started"
+author: "Phillip Labuschagne"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{TSIC Getting Started}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This is a simple getting started guide that show the basic `tsic` operations.
+
+* The main data structure: `ihist`
+* Estimate the time of infection
+* Compute probability that the infection occurred in an interval
+* Plot the estimation procedure for a single participant
+* Produce a grid of daily probabilities
+* Selecting the most informative tests
+
+This guide assumes that you successfully installed `tsic`. This means that you can run `library(tsic)` in R without getting any errors.
+
+```{r}
+library(tsic)
+```
+
+The current version of the guide will only consider a single participant. You have to write the code that will read in your datasets and that will loop over the individual persons in the dataset and select out their data into the format that `tsic` requires. Feel free to ask the package author for help.
+
+## The main data structure: `ihist`
+
+The main data structure is the diagnostic history which contains a single patient's test result history. This is usually assigned to a variable named `ihist` (which is short of individual history). Below is an example of such an history. The column names and order must be matched exactly.
+
+```{r}
+ihist <- data.frame(
+  ptid = c('p0', 'p0'),
+  sample_date = c(as.numeric(as.Date('2019-04-01')), as.numeric(as.Date('2019-05-01'))),
+  test = c('architect_weib3_delaney', 'architect_weib3_delaney'),
+  result = c('-', '+'),
+  stringsAsFactors = FALSE
+)
+ihist$sample_date <- ihist$sample_date + 0.5
+```
+
+```{r echo=FALSE,results='asis'}
+knitr::kable(ihist)
+```
+
+Note: `sample_date` is expressed as a `numeric`. (The number of days since 1970-01-01)
+
+Note: It will almost always make sense to add 0.5 to the sample date, since it is more likely that the visit occurred at noon than at midnight.
+
+Note: The test names must match those available from the `get_assay_dynamics()` function. (New: These are now stored in the `all_assay_dynamics` list distributed with `tsic`).
+
+```{r}
+# running this will print the available assays
+# PAUL: load( "~/src/from-git/tsic/data/all_assay_dynamics.rda" )
+# PAUL: source( "~/src/from-git/tsic/R/assay_dynamics.R" )
+# get_assay_dynamics()
+names(all_assay_dynamics)
+```
+
+### Estimate the time of infection
+
+The next step is to construct a function that computes the probability of observing *all* the results in the `ihist` for a given infection date. This is done by calling the `construct_aggregate_interpreter` function on the `ihist` variable. The value returned from `construct_aggregate_interpreter` is a function that takes a date (expressed as the number of days since 1970-01-01) as input and returns a probability. This returned function is assigned to the variable `agg_interpreter` which is short for aggregate interpreter.
+
+```{r}
+# PAUL: source( "~/src/from-git/tsic/R/result_interpretation.R" )
+
+######
+# PAUL: old; replaced see below...
+# PAUL: source( "~/src/from-git/tsic/R/interpretation_processing.R" )
+aggregate_interpreter_constructor_fn <- construct_aggregate_interpreter;
+estimate_lb_med_ub_fn <- estimate_lb_med_ub;
+scales <- "free_y"; # Note this is a change from what Phillip had shown.
+##
+# PAUL: new; replacing above stuff:
+# PAUL: source( "~/src/from-git/projects/pedlefse/ds/DSHIVInfectionTiming.R" )
+# aggregate_interpreter_constructor_fn <- construct.aggregate.interpreter;
+# estimate_lb_med_ub_fn <- estimate.lb.med.ub.for.density.fun;
+# scales <- "free_y"; # This is to scale the y axes of the plots to reflect densities rather than cumulative probabilities.
+######
+
+# PAUL: For testing various things, you might try these other choices:
+## This keeps the dates the same but changes the test from a combo assay to an RNA assay:
+# ihist$test <- ihist.RNAonly.oneday1$test
+# ihist$test <- ihist.Abonly.oneday1$test
+
+## Make the negative date X days before the positive date:
+X.days.apart <- 1
+ihist$sample_date[ 1 ] <- ( ihist$sample_date[ 2 ] - X.days.apart );
+
+agg_interpreter <- aggregate_interpreter_constructor_fn(ihist)
+class(agg_interpreter)
+# and some usage examples
+agg_interpreter(17928) # 2019-02-01
+agg_interpreter(17988) # 2019-04-02
+agg_interpreter(18020) # 2019-05-04
+```
+
+In computer programming terminology, `agg_interpreter` is called a [closure](https://en.wikipedia.org/wiki/Closure_(computer_programming)).
+
+Next you have to compute the various percentiles of `agg_interpreter` curve. This is done with the `estimate_lb_med_ub` function. `estimate_lb_med_ub` will normalize `agg_interpreter` as required. 
+
+The `range_start` and `range_end` arguments should be set to such values that `agg_interpreter` will be extremely close to 0 outside of the range. The shorter the range you specify, the more likely it is that the numerical integration will be performed accurately.
+
+```{r echo=FALSE, results='hide'}
+format_lb_med_ub <- function(lb_med_ub){
+  outp <- NULL
+  for (cname in names(lb_med_ub)){
+    if (is.null(lb_med_ub[[cname]])){
+      val <- ''
+    } else if (is.numeric(lb_med_ub[[cname]])) {
+      val <- sapply(lb_med_ub[[cname]], round, 2)
+    } else {
+      val <- lb_med_ub[[cname]]
+    }
+    outp <- rbind(outp,
+      data.frame(variable = cname,
+                 value = paste(val, collapse = '; ')))
+  }
+  outp$value <- gsub(', ', '', outp$value)
+  return(outp)
+}
+```
+
+```{r results = 'asis'}
+range_start <- min(ihist$sample_date) - 100
+range_end <- max(ihist$sample_date) + 100
+# PAUL: source( "~/src/from-git/tsic/R/interpretation_processing.R" )
+lb_med_ub <- estimate_lb_med_ub_fn(fun = agg_interpreter,                            
+                                range_start = range_start,
+                                range_end = range_end,
+                                verbose = FALSE)
+knitr::kable(format_lb_med_ub(lb_med_ub))
+```
+
+`estimate_lb_med_ub` returns a list. The `lb`, `med` and `ub` elements are the 2.5th, 50th and 97.5th percentiles of the distribution obtained when normalizing `agg_interpreter`. These quantities are estimate as well as the 95% uncertainty interval for the infection date.
+
+The `aoc` element of the list is the total area under the non-normalized `agg_interpreter` and the `max_agg` element is the maximum value the function attains.
+
+### Compute probability that the infection occurred in an interval
+
+A key application of `tsic` is to compute the amount of mass that falls in specific intervals. The `estimate_lb_med_ub` function's `date_splits` argument facilitates this. For each date in `date_splits`, `estimate_lb_med_ub` will compute the area under the normalized version of `agg_interpreter` that is to the left of that date. For the current example, if you want to compute the total mass between the two visit dates, to supply both dates to `estimate_lb_med_ub` via the `date_splits` argument and then subtract the two results from each other.
+
+```{r}
+range_start <- min(ihist$sample_date) - 100
+range_end <- max(ihist$sample_date) + 100
+lb_med_ub <- estimate_lb_med_ub_fn(fun = agg_interpreter,                            
+                                range_start = range_start,
+                                range_end = range_end,
+                                verbose = FALSE,
+                                date_splits = c(17987.5, 18017.5))
+knitr::kable(format_lb_med_ub(lb_med_ub))
+
+area_between <- lb_med_ub$aoc_left_of_date[2] - lb_med_ub$aoc_left_of_date[1]
+```
+
+The probability that the infection date was between `r as.Date(17987, origin = '1970-01-01')` and `r as.Date(18017, origin = '1970-01-01')` is `r area_between`
+
+You will probably have to write some code to compute the values you want to supply to `date_splits` for each person.
+
+### Plot the estimation procedure for a single participant
+
+Use the `plot_iihist` function to plot an `ihist`.
+
+```{r}
+# PAUL: source( "~/src/from-git/tsic/R/interpretation_presentation.R" )
+the_plot <- 
+plot_iihist(ihist = ihist, lb_med_ub = lb_med_ub, 
+            range_start = as.numeric(as.Date('2019-02-01')),
+            range_end = as.numeric(as.Date('2019-05-15')), 
+            plot_aggregate = TRUE,
+            produce_plot = FALSE,
+            scales = scales,
+            show_test_dates = 0.5,
+            x_breaks = c(as.numeric(as.Date('2019-03-01'))+0.50, 
+                         as.numeric(as.Date('2019-05-01'))+0.50 
+                         ),
+            aggregate_interpreter = agg_interpreter
+            )
+the_plot <- the_plot + 
+  ggplot2::theme_grey(base_size = 9) + # 18 is a good number of non-vignette applications
+  ggplot2::guides(color = FALSE)
+print(the_plot)
+```
+
+### Produce a grid of daily probabilities
+
+The normalized aggregate curve is the posterior distribution for the time of infection when assuming suitable priors. Thus it is important to be able to output this distribution for downstream analyses. This is performed by the `compute_daily_grid` function.
+
+```{r}
+daily_grid <- compute_daily_grid(agg_interpreter, tauc = lb_med_ub$aoc, 
+                                 range_start = range_start, range_end = range_end)
+str(daily_grid)
+```
+
+Note that both range_start and range_end ends with 0.5 indicating that the intervals will run from noon to noon. This is something that you will have to think carefully about. Does your visits have times? Or just the dates? When do you want to assume the visit occurred?
+
+This produces a rather large dataset for each participant. It is in long format with each row containing the start date and end date of a single interval together with the proportion of the mass that falls in that interval.
+
+### Selecting the most informative tests
+
+The example used up to now only used the Architect assay. It is common to use more than one type of diagnostic. While this usually allows more accurate timing, care should also be taken to ensure that the independence assumption that is required to construct the posterior distribution is not violated. Different tests at the same sample are somewhat dependent on each other. By removing the less informative test results, the degree to which the results used to construct the posterior are independent can be increased. 
+
+A function called `select_most_informative_results` helps with this. A key parameter of this function is the 'order' of the assays (in terms of window periods). It can be left `NULL` in which case it will default to the ordering that will be used in the AMP studies. There is no gaurantee that the assays that you want to use will be included in this default ordering, so investigate and use with caution. At the time of writing this order was still hard coded into the function.
+
+```{r}
+ihist <- data.frame(
+  ptid = c('p0', 'p0', 'p0', 'p0'),
+  sample_date = c(as.numeric(as.Date('2019-04-01')), as.numeric(as.Date('2019-04-01')),
+                  as.numeric(as.Date('2019-05-01')), as.numeric(as.Date('2019-05-01'))),
+  test = c('architect_weib3_delaney', "taqman_weib3_delaney_and_manufacturer",
+           'architect_weib3_delaney', "taqman_weib3_delaney_and_manufacturer"),
+  result = c('-', '-', '+', '+'),
+  stringsAsFactors = FALSE
+)
+ihist$sample_date <- ihist$sample_date + 0.5
+```
+
+Consider the following `ihist` where two tests were applied at each visit.
+```{r results='asis'}
+knitr::kable(ihist)
+```
+
+```{r echo=FALSE,results='asis'}
+agg_interpreter <- aggregate_interpreter_constructor_fn(ihist)
+range_start <- min(ihist$sample_date) - 100
+range_end <- max(ihist$sample_date) + 100
+lb_med_ub <- estimate_lb_med_ub_fn(fun = agg_interpreter,                            
+                                range_start = range_start,
+                                range_end = range_end,
+                                verbose = FALSE,
+                                date_splits = c(17987.5, 18017.5))
+
+full_iwidth <- lb_med_ub$ub - lb_med_ub$lb
+
+the_plot <- 
+plot_iihist(ihist = ihist, lb_med_ub = lb_med_ub, 
+            range_start = as.numeric(as.Date('2019-02-01')),
+            range_end = as.numeric(as.Date('2019-05-15')), 
+            plot_aggregate = TRUE,
+            produce_plot = FALSE,
+            scales = scales,
+            show_test_dates = 0.5,
+            x_breaks = c(as.numeric(as.Date('2019-03-01'))+0.50, 
+                         as.numeric(as.Date('2019-05-01'))+0.50 
+                         ),
+            aggregate_interpreter_constructor_fn = aggregate_interpreter_constructor_fn
+            )
+the_plot <- the_plot + 
+  ggplot2::theme_grey(base_size = 9) + # 18 is a good number of non-vignette applications
+  ggplot2::guides(color = FALSE)
+
+print(the_plot)
+```
+
+The width of the uncertainty interval is `r round(full_iwidth, 1)` days.
+
+By running `select_most_informative_results` the `ihist` will be split into two part: the kept part and the removed part.
+
+The kept part:
+```{r}
+x <- select_most_informative_results(ihist)
+knitr::kable(x$kept_ihist)
+```
+
+The removed part:
+```{r}
+knitr::kable(x$rm_ihist)
+```
+
+The 'fastest' negative result (Taqman) is kept while the 'slowest' negative result (Architect) is kept.
+
+Rerunning the estimation, notice that the uncertainty interval becomes wider:
+
+```{r}
+ihist <- x$kept_ihist
+rm(x)
+
+agg_interpreter <- aggregate_interpreter_constructor_fn(ihist)
+range_start <- min(ihist$sample_date) - 100
+range_end <- max(ihist$sample_date) + 100
+lb_med_ub <- estimate_lb_med_ub_fn(fun = agg_interpreter,                            
+                                range_start = range_start,
+                                range_end = range_end,
+                                verbose = FALSE,
+                                date_splits = c(17987.5, 18017.5))
+
+most_inform_iwidth <- lb_med_ub$ub - lb_med_ub$lb
+
+the_plot <- 
+plot_iihist(ihist = ihist, lb_med_ub = lb_med_ub, 
+            range_start = as.numeric(as.Date('2019-02-01')),
+            range_end = as.numeric(as.Date('2019-05-15')), 
+            plot_aggregate = TRUE,
+            produce_plot = FALSE,
+            scales = scales,
+            show_test_dates = 0.5,
+            x_breaks = c(as.numeric(as.Date('2019-03-01'))+0.50, 
+                         as.numeric(as.Date('2019-05-01'))+0.50 
+                         ),
+            aggregate_interpreter_constructor_fn = aggregate_interpreter_constructor_fn
+            )
+the_plot <- the_plot + 
+  ggplot2::theme_grey(base_size = 9) + # 18 is a good number of non-vignette applications
+  ggplot2::guides(color = FALSE)
+
+print(the_plot)
+```
+
+The width of the uncertainty interval is now `r round(most_inform_iwidth, 1)` days compared with `r round(full_iwidth, 1)` days when all four results were considered.
+
+
+

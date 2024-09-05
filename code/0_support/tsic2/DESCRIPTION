@@ -1,0 +1,26 @@
+Package: tsic
+Title: Time since infection calculator
+Description: Computes the time since HIV infection based on set of diagnostic test results.
+Version: 1.0.1
+Author: Phillip Labuschagne <jlabusch2@fredhutch.org>
+Maintainer: Phillip Labuschagne <jlabusch2@fredhutch.org>
+Imports:
+    dplyr,
+    ggplot2,
+    lubridate,
+    optparse,
+    pracma,
+    purrr,
+    tidyr
+Suggests:
+    testthat,
+    knitr,
+    rmarkdown
+Depends:
+    R (>= 3.5.0)
+License: GPL-3
+https: https://github.com/philliplab/tsic
+RoxygenNote: 7.0.2
+Encoding: UTF-8
+VignetteBuilder: knitr
+LazyData: true
