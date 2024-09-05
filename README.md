@@ -7,7 +7,7 @@ Any use of this method in new research would be better done with the "tsic3" pac
 
   URL of tsic3
 
-1. System requirements
+## 1. System requirements
 
   This software was run on Ubuntu 18.04.5 LTS using R version 3.6.3 (2020-02-29)
   
@@ -32,7 +32,7 @@ Any use of this method in new research would be better done with the "tsic3" pac
   `run_weib3_idt.R`:
     ggplot2
 
-2. Installation guide
+## 2. Installation guide
   
   Install required version of R. 
   Install the tsic package:  https://github.com/philliplab/tsic
@@ -41,7 +41,7 @@ Any use of this method in new research would be better done with the "tsic3" pac
   
   Running the scripts requires configuring the "CONFIG" sections to map to the location of the files on your local filesystem.
 
-3. Demo
+## 3. Demo
 
   This software also requires the installation of the "tsic" package written by Philip Labuschagne, which is available here:
   
@@ -67,7 +67,7 @@ Any use of this method in new research would be better done with the "tsic3" pac
     R CMD BATCH run_hbayes.R &
     R CMD BATCH run_weib3_idt.R &
 
-4. Instructions for use
+## 4. Instructions for use
 
   Same as demo instructions above.
   
