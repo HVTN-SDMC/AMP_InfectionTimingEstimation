@@ -49,13 +49,13 @@ This software was originally run on 19 June 2020 as an operational step of the A
 
   The names of the directories in this repository indicate the order in which the scripts should be run:
 
-  **0_support** 
+  **0_support**:  
   This directory contains code libraries required by these scripts, and includes an early (unreleased) version of the "tsic2" package.  No code is run directly out of here.
 
-  **1_data_preparation**
+  **1_data_preparation**:  
     `amp_dx_history_preprocessing.R`:  the script that processes the study file of lab test data.  This script takes only a few seconds to run, and generates all files required by the next two scripts.
 
-  **2_run_analysis**
+  **2_run_analysis**:  
     `run_hbayes.R`:  the script that estimates the infection dates using the Bayesian approach.  This script takes 30-60 minutes to run, depending your computer.
     `run_weib3_idt.R`:  the script that estimates the infection dates using the Weibull method.  This script takes 30-60 minutes to run, depending your computer.
 
