@@ -5,7 +5,7 @@ This software is presented here as an archive of what was used to operationally 
 
 Any use of this method in new research would be better done with the "tsic3" package, available here:
 
-  URL of tsic3
+  [URL of tsic3]
 
 ## 1. System requirements
 
