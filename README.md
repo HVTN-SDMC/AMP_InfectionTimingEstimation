@@ -20,16 +20,16 @@ Any use of this method in new research would be better done with the "tsic3" pac
 
   **1_data_preparation**
 
-  amp_dx_history_preprocessing.R:
+  `amp_dx_history_preprocessing.R`:
     tidyverse
 
   **2_run_analysis**
 
-  run_hbayes.R:
+  `run_hbayes.R`:
     ggplot2
     tsic
 
-  run_weib3_idt.R:
+  `run_weib3_idt.R`:
     ggplot2
 
 2. Installation guide
