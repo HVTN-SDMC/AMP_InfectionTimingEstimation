@@ -13,7 +13,7 @@ This software was originally run on 19 June 2020 as an operational step of the A
 
   **0_support**
 
-  Early files from the tsic2 package (in the directory `tsic2`) and the library file `tsic2_supplement.Rlib`:
+  Early files from the tsic2 package (in the directory tsic2) and the library file `tsic2_supplement.Rlib`:
     profvis
 
   **1_data_preparation**
