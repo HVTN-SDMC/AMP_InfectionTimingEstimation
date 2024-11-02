@@ -72,6 +72,7 @@ all_results <- NULL
 for (c_ptid in setdiff(unique(dat$ptid), invalid_ptids$ptid)[1:how_many]){
   print(c_ptid)
   c_hist <- subset(dat, ptid == c_ptid)
+  c_hist$sample_date <- as.numeric( c_hist$sample_date ) + 0.5; # start at noon.
   agg_inter <- construct_aggregate_interpreter(c_hist)
 
   range_start <- floor(min(c_hist$sample_date) - 100)
@@ -132,7 +133,6 @@ for (c_ptid in setdiff(unique(dat$ptid), invalid_ptids$ptid)[1:how_many]){
   }
 }
 
-#NEW FROM HERE
 all_results$day <- as.character(as.Date(all_results$interval_start, origin = '1970-01-01'))
 all_results$FLAG <- 'Processed without issues'
 
@@ -153,7 +153,6 @@ names(trans_results) <- c('ptid', 'day', 'mass',
                           'interval_length_tsic', 'FLAG',
                           'LB_tsic_dee_unrounded', 'MEDIAN_tsic_dee_unrounded', 'UB_tsic_dee_unrounded')
 all_results <- trans_results
-#END OF NEW
 
 # export the results
 setwd (results_folder)
